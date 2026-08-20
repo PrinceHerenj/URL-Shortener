@@ -67,6 +67,20 @@ jobs:
       - name: Publish Release Build
         run: dotnet publish src/SmartUrlShortener.csproj --configuration Release -o ./publish
 
+      - name: Disable Oryx Build During Deployment
+        uses: azure/appservice-settings@v1
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          app-settings-json: |
+            [
+              {
+                "name": "SCM_DO_BUILD_DURING_DEPLOYMENT",
+                "value": "false",
+                "slotSetting": false
+              }
+            ]
+
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
