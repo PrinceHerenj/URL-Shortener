@@ -8,7 +8,7 @@ on:
 
 env:
   DOTNET_VERSION: '8.0.x'
-  AZURE_WEBAPP_NAME: 'smart-url-shortener-app' # Replace with your Azure App Service name
+  AZURE_WEBAPP_NAME: 'url-shortener-sneh'
 
 jobs:
   build-and-test:
