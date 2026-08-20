@@ -1,0 +1,75 @@
+name: Build, Test, and Deploy to Azure
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  AZURE_WEBAPP_NAME: 'smart-url-shortener-app' # Replace with your Azure App Service name
+
+jobs:
+  build-and-test:
+    name: Build & Test Suite (CI)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore Dependencies
+        run: dotnet restore SmartUrlShortener.sln
+
+      - name: Build Solution
+        run: dotnet build SmartUrlShortener.sln --configuration Release --no-restore
+
+      - name: Check Code Formatting
+        run: dotnet format --verify-no-changes --verbosity diagnostic
+
+      - name: Execute xUnit Tests & Collect Coverage
+        run: >
+          dotnet test SmartUrlShortener.sln
+          --configuration Release
+          --no-build
+          --verbosity normal
+          --collect:"XPlat Code Coverage"
+          --results-directory ./TestResults
+
+      - name: Upload Test Coverage Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-report
+          path: ./TestResults/**/coverage.cobertura.xml
+          retention-days: 7
+
+  deploy:
+    name: Deploy to Azure App Service (CD)
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Publish Release Build
+        run: dotnet publish src/SmartUrlShortener.csproj --configuration Release -o ./publish
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: ./publish

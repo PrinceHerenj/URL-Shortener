@@ -19,7 +19,8 @@ using (var scope = app.Services.CreateScope()) {
 }
 
 app.MapPost("/shorten", async (ShortenRequest request, AppDbContext db, HttpContext httpContext) => {
-    if (string.IsNullOrWhiteSpace(request.Url) || !Uri.IsWellFormedUriString(request.Url, UriKind.Absolute)) {
+    if (!Uri.TryCreate(request.Url, UriKind.Absolute, out var uri) ||
+        uri.Scheme is not ("http" or "https")) {
         return Results.BadRequest(new { error = "Please provide a valid absolute URL."});
     }
 

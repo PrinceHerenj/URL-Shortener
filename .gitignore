@@ -484,3 +484,10 @@ $RECYCLE.BIN/
 *.swp
 
 PROJECT-GUIDE.md
+*.db
+*.db-shm
+*.db-wal
+*.log
+
+TestResults/
+coveragereport/

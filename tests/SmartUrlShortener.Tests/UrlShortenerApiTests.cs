@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -88,5 +89,55 @@ public class UrlShortenerApiTests : IClassFixture<WebApplicationFactory<Program>
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.Equal("https://github.com/repo", response.Headers.Location?.ToString());
+    }
+
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("not-a-valid-url")]
+    [InlineData("ftp://invalid-scheme.com")]
+    [InlineData("javascript:alert(1)")]
+    public async Task PostShorten_WithInvalidUrlFormat_ReturnsBadRequestOrUnprocessable(string invalidUrl)
+    {
+        var request = new ShortenRequest(invalidUrl);
+
+        var response = await _client.PostAsJsonAsync("/shorten", request);
+
+        Assert.True(
+            response.StatusCode == HttpStatusCode.BadRequest ||
+            response.StatusCode == HttpStatusCode.UnprocessableEntity,
+            $"Expected 400 or 422 for input '{invalidUrl}', but received {response.StatusCode}");
+    }
+
+    [Fact]
+    public async Task PostShorten_WithMalformedJson_ReturnsBadRequest()
+    {
+        var content = new StringContent("{ malformed_json: ", Encoding.UTF8, "application/json");
+
+        var response = await _client.PostAsync("/shorten", content);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostShorten_WithEmptyBody_ReturnsBadRequest()
+    {
+        var content = new StringContent("", Encoding.UTF8, "application/json");
+
+        var response = await _client.PostAsync("/shorten", content);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("../secret")]
+    [InlineData("slug with spaces")]
+    [InlineData("???")]
+    public async Task GetRedirect_WithMalformedSlugCharacters_ReturnsNotFound(string invalidSlug)
+    {
+        var response = await _client.GetAsync($"/{invalidSlug}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 }
